@@ -1,0 +1,875 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script type="application/json" id="data-app-metadata">
+{
+  "prompt": "help me build a simple, beautiful report for dataset ecommerce, with a few filters",
+  "model": "claude-opus-5-5",
+  "effort": null,
+  "createdAt": "2026-10-01T03:03:11Z",
+  "updatedAt": "2026-10-13T08:58:53Z"
+}
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ecommerce Overview</title>
+  <meta name="description" content="A simple ecommerce report: key metrics and trends with a few filters.">
+  <script src="https://cdn.jsdelivr.net/npm/echarts@6.1.0/dist/echarts.min.js" integrity="sha384-C2iskrW/uPW46KzOjrvJIQo4YkV8lkD+QS0CrDN18IIPIpT/g2USu8bTP3nvmIAD" crossorigin="anonymous"></script>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --surface: #ffffff;
+      --border: #e6e8ef;
+      --text: #1b1f2a;
+      --muted: #6b7280;
+      --faint: #9aa1ad;
+      --accent: #4f46e5;
+      --accent-soft: #eef0ff;
+      --accent-2: #14b8a6;
+      --danger: #c2410c;
+      --radius: 14px;
+      --shadow: 0 1px 2px rgb(16 24 40 / 0.04), 0 4px 16px rgb(16 24 40 / 0.04);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font: 14px/1.45 Inter, system-ui, -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button { font: inherit; color: inherit; cursor: pointer; }
+    .wrap { max-width: 1320px; margin: 0 auto; padding: 24px 24px 48px; }
+
+    /* Header */
+    header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+    header h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+    header p { margin: 4px 0 0; color: var(--muted); }
+    .header-actions { display: flex; gap: 8px; }
+    .chip-btn {
+      border: 1px solid var(--border); background: var(--surface); border-radius: 999px;
+      padding: 6px 12px; font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .chip-btn:hover { border-color: #cfd3dd; }
+    .chip-btn.accent { background: var(--accent-soft); border-color: transparent; color: var(--accent); }
+    .chip-btn[hidden] { display: none; }
+
+    /* Filter bar */
+    .filters {
+      position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+      background: rgb(246 247 251 / 0.9); backdrop-filter: blur(8px); padding: 10px 0 14px; margin-bottom: 6px;
+    }
+    .segmented {
+      display: inline-flex; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 3px;
+    }
+    .segmented button {
+      border: 0; background: none; padding: 5px 11px; border-radius: 7px; font-size: 13px; color: var(--muted); font-weight: 500;
+    }
+    .segmented button.active { background: var(--accent); color: #fff; box-shadow: 0 1px 2px rgb(79 70 229 / 0.3); }
+    .segmented button:not(.active):hover { color: var(--text); }
+    .spacer { flex: 1; }
+
+    .ms { position: relative; }
+    .ms-btn {
+      border: 1px solid var(--border); background: var(--surface); border-radius: 10px; padding: 7px 12px;
+      font-size: 13px; display: inline-flex; gap: 6px; align-items: center; min-width: 140px; justify-content: space-between;
+    }
+    .ms-btn .lbl { color: var(--muted); }
+    .ms-btn .val { font-weight: 600; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ms-btn.has-value { border-color: var(--accent); background: var(--accent-soft); }
+    .ms-btn.has-value .val { color: var(--accent); }
+    .ms-btn svg { flex: none; color: var(--faint); }
+    .ms-pop {
+      position: absolute; top: calc(100% + 6px); left: 0; width: 260px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 12px 32px rgb(16 24 40 / 0.12);
+      padding: 8px; display: none; z-index: 30;
+    }
+    .ms.open .ms-pop { display: block; }
+    .ms-pop input[type=search] {
+      width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; font: inherit; font-size: 13px; outline: none;
+    }
+    .ms-pop input[type=search]:focus { border-color: var(--accent); }
+    .ms-list { max-height: 240px; overflow: auto; margin: 6px 0; }
+    .ms-list label {
+      display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; font-size: 13px; cursor: pointer;
+    }
+    .ms-list label:hover { background: var(--bg); }
+    .ms-list input { accent-color: var(--accent); }
+    .ms-empty { color: var(--faint); font-size: 12px; padding: 8px; }
+    .ms-foot { display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 6px; }
+    .ms-foot button { border: 0; background: none; font-size: 12px; color: var(--accent); font-weight: 600; padding: 4px 6px; }
+
+    /* KPI strip */
+    .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 14px; position: relative; }
+    .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
+    .kpi .k-label { color: var(--muted); font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+    .kpi .k-value { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin-top: 6px; font-variant-numeric: tabular-nums; }
+    .kpi .k-sub { color: var(--faint); font-size: 12px; margin-top: 2px; }
+    .kpis.loading .k-value { opacity: 0.35; }
+    .kpis-msg { grid-column: 1 / -1; font-size: 13px; color: var(--danger); display: none; }
+    .kpis-msg.visible { display: block; }
+
+    /* Panels */
+    .grid { display: grid; gap: 14px; margin-bottom: 14px; }
+    .g-trend { grid-template-columns: 2fr 1fr; }
+    .g-two { grid-template-columns: 1fr 1fr; }
+    .panel {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 16px 18px; position: relative; box-shadow: var(--shadow); min-width: 0;
+    }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+    .panel h2 { font-size: 15px; font-weight: 600; margin: 0; }
+    .panel .hint { color: var(--faint); font-size: 12px; }
+    .panel-tools, .section-head { display: flex; align-items: center; gap: 10px; }
+    .section-head { justify-content: space-between; color: var(--muted); font-size: 12px; font-weight: 600;
+                    text-transform: uppercase; letter-spacing: 0.04em; margin: 4px 2px 8px; }
+    .chart { height: 300px; }
+    .chart.tall { height: 340px; }
+    .status {
+      position: absolute; inset: 48px 12px 12px; display: none; align-items: center; justify-content: center;
+      background: rgb(255 255 255 / 0.72); text-align: center; color: var(--muted); font-size: 13px; padding: 16px; border-radius: 10px;
+    }
+    .status.visible { display: flex; }
+    .status.error { color: var(--danger); background: rgb(255 255 255 / 0.94); }
+    .status.loading::before {
+      content: ''; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--accent-soft);
+      border-top-color: var(--accent); animation: spin 0.8s linear infinite; margin-right: 10px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    th {
+      text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;
+      padding: 8px 10px; border-bottom: 1px solid var(--border); user-select: none;
+    }
+    th.num, td.num { text-align: right; }
+    th.sortable { cursor: pointer; }
+    th.sortable:hover { color: var(--text); }
+    th .arrow { color: var(--accent); }
+    td { padding: 10px; border-bottom: 1px solid #f0f1f5; }
+    tr:last-child td { border-bottom: 0; }
+    td.rank { color: var(--faint); width: 36px; }
+    td.name { font-weight: 500; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bar-cell { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
+    .bar-track { width: 120px; height: 6px; background: var(--accent-soft); border-radius: 3px; overflow: hidden; }
+    .bar-fill { height: 100%; background: var(--accent); border-radius: 3px; }
+    .table-wrap { min-height: 120px; }
+
+    footer { color: var(--faint); font-size: 12px; text-align: center; margin-top: 18px; }
+
+    /* Download menu: a panel's data as CSV, its picture as PNG */
+    .dl { position: relative; display: inline-flex; }
+    .dl[hidden] { display: none; }
+    .dl-btn {
+      border: 1px solid transparent; background: none; border-radius: 8px; width: 28px; height: 28px; padding: 0;
+      display: inline-flex; align-items: center; justify-content: center; color: var(--muted);
+    }
+    .dl-btn:hover, .dl.open .dl-btn { background: var(--bg); border-color: var(--border); color: var(--text); }
+    .dl-btn:disabled { cursor: progress; }
+    .dl-btn.busy svg { display: none; }
+    .dl-btn.busy::before {
+      content: ''; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--accent-soft);
+      border-top-color: var(--accent); animation: spin 0.8s linear infinite;
+    }
+    .dl-pop {
+      position: absolute; top: calc(100% + 6px); right: 0; min-width: 210px; background: var(--surface); z-index: 30;
+      border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 12px 32px rgb(16 24 40 / 0.12); padding: 4px;
+      display: none; text-transform: none; letter-spacing: normal;
+    }
+    .dl.open .dl-pop { display: block; }
+    .dl-pop button {
+      display: flex; flex-direction: column; width: 100%; border: 0; background: none; text-align: left;
+      padding: 7px 10px; border-radius: 6px; font-size: 13px; font-weight: 500; color: var(--text);
+    }
+    .dl-pop button:hover { background: var(--bg); }
+    .dl-pop small { color: var(--faint); font-size: 11px; font-weight: 400; }
+    .toast {
+      position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 50; max-width: min(520px, calc(100% - 32px));
+      background: var(--text); color: #fff; border-radius: 10px; padding: 9px 14px; font-size: 13px;
+      box-shadow: 0 12px 32px rgb(16 24 40 / 0.2); opacity: 0; pointer-events: none; transition: opacity 0.15s;
+    }
+    .toast.visible { opacity: 1; }
+    .toast.error { background: var(--danger); }
+
+    @media (max-width: 1000px) {
+      .kpis { grid-template-columns: repeat(2, 1fr); }
+      .g-trend, .g-two { grid-template-columns: 1fr; }
+      .bar-track { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap" data-anfra-container="page" data-anfra-label="Ecommerce Overview">
+    <header data-anfra-container="header" data-anfra-label="Header">
+      <div data-anfra-block="title" data-anfra-label="Title and greeting">
+        <h1>Ecommerce Overview</h1>
+        <p id="greeting"></p>
+      </div>
+      <div class="header-actions" data-anfra-block="header-actions" data-anfra-label="Clear selection and reset filters">
+        <button id="clear-selection" class="chip-btn accent" type="button" hidden>✕ Clear chart selection</button>
+        <button id="reset-filters" class="chip-btn" type="button">Reset filters</button>
+      </div>
+    </header>
+
+    <div class="filters" data-anfra-container="filters" data-anfra-label="Filters">
+      <div class="segmented" id="date-presets" data-anfra-block="date-range" data-anfra-label="Order date range" data-anfra-control="dateRange">
+        <button type="button" data-preset="last 30 days">30D</button>
+        <button type="button" data-preset="last 90 days">90D</button>
+        <button type="button" data-preset="last 12 months">12M</button>
+        <button type="button" data-preset="this year">YTD</button>
+        <button type="button" data-preset="" class="active">All time</button>
+      </div>
+      <div class="ms" id="ms-country" data-anfra-block="country-filter" data-anfra-label="Country filter" data-anfra-control="country"></div>
+      <div class="ms" id="ms-category" data-anfra-block="category-filter" data-anfra-label="Category filter" data-anfra-control="category"></div>
+      <div class="ms" id="ms-status" data-anfra-block="status-filter" data-anfra-label="Status filter" data-anfra-control="status"></div>
+      <div class="spacer"></div>
+      <div class="segmented" id="grain-toggle" data-anfra-block="grain" data-anfra-label="Trend grain" data-anfra-control="grain">
+        <button type="button" data-grain="week">Week</button>
+        <button type="button" data-grain="month" class="active">Month</button>
+        <button type="button" data-grain="quarter">Quarter</button>
+      </div>
+    </div>
+
+    <div class="section-head"><span>Key metrics</span><div class="dl" data-anfra-render="skip" data-query="kpis" data-container="kpis" data-title="Key metrics" hidden></div></div>
+    <section class="kpis" id="kpis" data-anfra-container="kpis" data-anfra-label="Key metrics">
+      <div class="kpi" data-anfra-block="revenue" data-anfra-label="Revenue" data-anfra-query="kpis"><div class="k-label">Revenue</div><div class="k-value" id="k-gmv">—</div><div class="k-sub">Total revenue</div></div>
+      <div class="kpi" data-anfra-block="orders" data-anfra-label="Orders" data-anfra-query="kpis"><div class="k-label">Orders</div><div class="k-value" id="k-orders">—</div><div class="k-sub">Total orders placed</div></div>
+      <div class="kpi" data-anfra-block="aov" data-anfra-label="Average order value" data-anfra-query="kpis"><div class="k-label">AOV</div><div class="k-value" id="k-aov">—</div><div class="k-sub">Average order value</div></div>
+      <div class="kpi" data-anfra-block="customers" data-anfra-label="Customers" data-anfra-query="kpis"><div class="k-label">Customers</div><div class="k-value" id="k-buyers">—</div><div class="k-sub">Unique purchasing customers</div></div>
+      <div class="kpi" data-anfra-block="units" data-anfra-label="Units sold" data-anfra-query="kpis"><div class="k-label">Units sold</div><div class="k-value" id="k-units">—</div><div class="k-sub">Items across all orders</div></div>
+      <div class="kpis-msg" id="kpis-status"></div>
+    </section>
+
+    <div class="grid g-trend" data-anfra-container="trend-row" data-anfra-label="Trend and order status">
+      <section class="panel" data-anfra-block="trend" data-anfra-label="Revenue &amp; orders over time" data-anfra-query="trend">
+        <div class="panel-head"><h2>Revenue &amp; orders over time</h2><div class="panel-tools"><span class="hint">Bars: revenue · Line: orders</span><div class="dl" data-anfra-render="skip" data-query="trend" data-block="trend" data-title="Revenue &amp; orders over time" hidden></div></div></div>
+        <div id="trend" class="chart tall"></div>
+        <div id="trend-status" class="status"></div>
+      </section>
+      <section class="panel" data-anfra-block="orders-by-status" data-anfra-label="Orders by status" data-anfra-query="byStatus">
+        <div class="panel-head"><h2>Orders by status</h2><div class="panel-tools"><span class="hint">Click to filter</span><div class="dl" data-anfra-render="skip" data-query="byStatus" data-block="orders-by-status" data-title="Orders by status" hidden></div></div></div>
+        <div id="by-status" class="chart tall"></div>
+        <div id="by-status-status" class="status"></div>
+      </section>
+    </div>
+
+    <div class="grid g-two" data-anfra-container="breakdowns" data-anfra-label="Category and country breakdowns">
+      <section class="panel" data-anfra-block="revenue-by-category" data-anfra-label="Revenue by category" data-anfra-query="byCategory">
+        <div class="panel-head"><h2>Revenue by category</h2><div class="panel-tools"><span class="hint">Click to filter</span><div class="dl" data-anfra-render="skip" data-query="byCategory" data-block="revenue-by-category" data-title="Revenue by category" hidden></div></div></div>
+        <div id="by-category" class="chart"></div>
+        <div id="by-category-status" class="status"></div>
+      </section>
+      <section class="panel" data-anfra-block="top-countries" data-anfra-label="Top countries by revenue" data-anfra-query="byCountry">
+        <div class="panel-head"><h2>Top countries by revenue</h2><div class="panel-tools"><span class="hint">Click to filter</span><div class="dl" data-anfra-render="skip" data-query="byCountry" data-block="top-countries" data-title="Top countries by revenue" hidden></div></div></div>
+        <div id="by-country" class="chart"></div>
+        <div id="by-country-status" class="status"></div>
+      </section>
+    </div>
+
+    <section class="panel" data-anfra-block="top-products" data-anfra-label="Top 10 products" data-anfra-query="topProducts">
+      <div class="panel-head"><h2>Top 10 products</h2><div class="panel-tools"><span class="hint">Click a header to sort</span><div class="dl" data-anfra-render="skip" data-query="topProducts" data-block="top-products" data-title="Top products" hidden></div></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Product</th>
+              <th class="num sortable" data-sort="revenue">Revenue <span class="arrow"></span></th>
+              <th class="num sortable" data-sort="orders">Orders <span class="arrow"></span></th>
+              <th class="num sortable" data-sort="units">Units <span class="arrow"></span></th>
+            </tr>
+          </thead>
+          <tbody id="products-body"></tbody>
+        </table>
+      </div>
+      <div id="products-status" class="status"></div>
+    </section>
+
+    <footer id="footer" data-anfra-block="footer" data-anfra-label="Data freshness" data-anfra-query="kpis"></footer>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite" data-anfra-render="skip"></div>
+
+  <script>
+    const DATASET = 'ecommerce';
+    const app = Anfra.createApp({ title: 'Ecommerce Overview' });
+
+    // ---------- Queries ----------
+    const kpis = app.createQuery('kpis', {
+      dataset: DATASET,
+      aql: `
+        explore {
+          measures {
+            revenue: revenue,
+            orders: order_count,
+            units: units_sold,
+            buyers: count_distinct(customers.id),
+          }
+        }
+      `,
+    });
+
+    const trend = app.createQuery('trend', {
+      dataset: DATASET,
+      aql: `
+        explore {
+          dimensions { period: orders.ordered_at }
+          measures {
+            revenue: revenue,
+            orders: order_count,
+          }
+          sorts { period asc }
+        }
+      `,
+    });
+
+    const byCategory = app.createQuery('byCategory', {
+      dataset: DATASET,
+      pageSize: 12,
+      aql: `
+        explore {
+          dimensions { category: products.category }
+          measures { revenue: revenue }
+          sorts { revenue desc }
+        }
+      `,
+    });
+
+    const byCountry = app.createQuery('byCountry', {
+      dataset: DATASET,
+      pageSize: 10,
+      aql: `
+        explore {
+          dimensions { country: customers.country }
+          measures { revenue: revenue }
+          sorts { revenue desc }
+        }
+      `,
+    });
+
+    const byStatus = app.createQuery('byStatus', {
+      dataset: DATASET,
+      aql: `
+        explore {
+          dimensions { status: orders.status }
+          measures { order_cnt: order_count }
+          sorts { order_cnt desc }
+        }
+      `,
+    });
+
+    const topProducts = app.createQuery('topProducts', {
+      dataset: DATASET,
+      pageSize: 10,
+      aql: `
+        explore {
+          dimensions { product: products.name }
+          measures {
+            revenue: revenue,
+            orders: order_count,
+            units: units_sold,
+          }
+          sorts { revenue desc }
+        }
+      `,
+    });
+
+    const ALL_QUERIES = [kpis, trend, byCategory, byCountry, byStatus, topProducts];
+
+    // ---------- Controls ----------
+    // All time: the sample's data ends in 2026, so a range relative to today
+    // would empty out as time passes.
+    const DEFAULT_RANGE = '';
+    const dateRange = app.createFilter('dateRange', { type: 'date', label: 'Order date' });
+    const country = app.createFilter('country', { dataset: DATASET, field: 'customers.country', label: 'Country' });
+    const category = app.createFilter('category', { dataset: DATASET, field: 'products.category', label: 'Category' });
+    const status = app.createFilter('status', { dataset: DATASET, field: 'orders.status', label: 'Status' });
+    const grain = app.createDateDrill('grain', { default: 'month', label: 'Grain' });
+
+    for (const q of ALL_QUERIES) {
+      app.mapControl(dateRange, q, { field: 'orders.ordered_at' });
+      app.mapControl(country, q, { field: 'customers.country' });
+      app.mapControl(category, q, { field: 'products.category' });
+      app.mapControl(status, q, { field: 'orders.status' });
+    }
+    app.mapControl(grain, trend, { field: 'orders.ordered_at' });
+
+    // ---------- Cross-filtering ----------
+    const SOURCES = [byCategory, byCountry, byStatus];
+    for (const src of SOURCES) {
+      for (const target of ALL_QUERIES) {
+        if (target !== src) app.mapCrossFilter(src, target);
+      }
+    }
+
+    // ---------- Formatting ----------
+    const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 });
+    const currencyFull = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+    const currency2 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+    const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
+    const integer = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+    const num = (v) => (v == null || v === '' ? null : Number(v));
+    const fmt = (f, v) => (num(v) == null || Number.isNaN(num(v)) ? '—' : f.format(num(v)));
+    const pct = (v) => {
+      const n = num(v);
+      if (n == null || Number.isNaN(n)) return '—';
+      // The metric may come back as a 0–1 ratio or as a percentage already.
+      return `${(n <= 1 ? n * 100 : n).toFixed(1)}%`;
+    };
+
+    let currentGrain = 'month';
+    function formatPeriod (value) {
+      const s = String(value).slice(0, 10);
+      const d = new Date(`${s}T00:00:00Z`);
+      if (Number.isNaN(d.getTime())) return String(value);
+      if (currentGrain === 'quarter') return `Q${Math.floor(d.getUTCMonth() / 3) + 1} ${d.getUTCFullYear()}`;
+      if (currentGrain === 'week' || currentGrain === 'day') {
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit', timeZone: 'UTC' });
+      }
+      return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+    }
+
+    // ---------- Chart setup ----------
+    const ACCENT = '#4f46e5';
+    const ACCENT_2 = '#14b8a6';
+    const PALETTE = ['#4f46e5', '#14b8a6', '#f59e0b', '#ef4444', '#8b5cf6', '#0ea5e9', '#64748b', '#ec4899'];
+    const AXIS = {
+      axisLine: { lineStyle: { color: '#e6e8ef' } },
+      axisTick: { show: false },
+      axisLabel: { color: '#6b7280', fontFamily: 'Inter, system-ui, sans-serif' },
+      splitLine: { lineStyle: { color: '#f0f1f5' } },
+    };
+    const TOOLTIP = {
+      backgroundColor: '#1b1f2a', borderWidth: 0, padding: [8, 12],
+      textStyle: { color: '#fff', fontFamily: 'Inter, system-ui, sans-serif', fontSize: 12 },
+    };
+
+    const charts = {
+      trend: echarts.init(document.getElementById('trend')),
+      byStatus: echarts.init(document.getElementById('by-status')),
+      byCategory: echarts.init(document.getElementById('by-category')),
+      byCountry: echarts.init(document.getElementById('by-country')),
+    };
+
+    document.getElementById('greeting').textContent =
+      `Hi ${Anfra.user.name} — sales performance across products, markets and order outcomes.`;
+
+    // ---------- State rendering ----------
+    const logged = new Set();
+    function logFirstResult (query) {
+      if (query.state !== 'success' || logged.has(query.name)) return;
+      logged.add(query.name);
+      console.log(`[${query.name}] columns`, query.result.columns, 'first row', query.result.rows[0]);
+    }
+
+    function statusText (query) {
+      if (query.state === 'executing') return { text: 'Loading…', cls: 'loading' };
+      if (query.state === 'error') {
+        return query.error.name === 'PermissionError'
+          ? { text: "You don't have access to this data.", cls: 'error' }
+          : { text: `Couldn't load: ${query.error.message}`, cls: 'error' };
+      }
+      if (query.state === 'success' && query.result.rows.length === 0) return { text: 'No data for these filters', cls: '' };
+      return { text: '', cls: '' };
+    }
+
+    function renderStatus (query, elementId) {
+      const el = document.getElementById(elementId);
+      const { text, cls } = statusText(query);
+      el.className = `status ${cls}`;
+      el.textContent = text;
+      el.classList.toggle('visible', text !== '');
+    }
+
+    const hasRows = (q) => q.result && q.result.rows.length > 0;
+    const selectedKeys = (q, key) => new Set(q.selectedRows.map((r) => r[key]));
+    const isDim = (keys, value) => keys.size > 0 && !keys.has(value);
+
+    // ---------- Renderers ----------
+    function renderKpis () {
+      const strip = document.getElementById('kpis');
+      strip.classList.toggle('loading', kpis.state === 'executing');
+      const msg = document.getElementById('kpis-status');
+      const { text, cls } = statusText(kpis);
+      msg.textContent = cls === 'error' ? text : '';
+      msg.classList.toggle('visible', cls === 'error');
+
+      const row = hasRows(kpis) ? kpis.result.rows[0] : null;
+      document.getElementById('k-gmv').textContent = row ? fmt(currency, row.revenue) : '—';
+      document.getElementById('k-gmv').title = row ? fmt(currencyFull, row.revenue) : '';
+      document.getElementById('k-orders').textContent = row ? fmt(compact, row.orders) : '—';
+      document.getElementById('k-orders').title = row ? fmt(integer, row.orders) : '';
+      const aov = row && num(row.orders) ? num(row.revenue) / num(row.orders) : null;
+      document.getElementById('k-aov').textContent = aov == null ? '—' : fmt(currency2, aov);
+      document.getElementById('k-units').textContent = row ? fmt(compact, row.units) : '—';
+      document.getElementById('k-units').title = row ? fmt(integer, row.units) : '';
+      document.getElementById('k-buyers').textContent = row ? fmt(compact, row.buyers) : '—';
+      document.getElementById('k-buyers').title = row ? fmt(integer, row.buyers) : '';
+    }
+
+    function renderTrend () {
+      renderStatus(trend, 'trend-status');
+      if (!trend.result) return;
+      const rows = trend.result.rows;
+      charts.trend.setOption({
+        color: [ACCENT, ACCENT_2],
+        grid: { left: 8, right: 8, top: 28, bottom: 8, containLabel: true },
+        legend: { show: false },
+        tooltip: {
+          ...TOOLTIP, trigger: 'axis', axisPointer: { type: 'shadow', shadowStyle: { color: 'rgba(79,70,229,0.06)' } },
+          formatter: (ps) => `<b>${ps[0].axisValue}</b><br>` + ps.map((p) =>
+            `${p.marker} ${p.seriesName}: ${p.seriesIndex === 0 ? fmt(currencyFull, p.value) : fmt(integer, p.value)}`).join('<br>'),
+        },
+        xAxis: { type: 'category', data: rows.map((r) => formatPeriod(r.period)), ...AXIS, splitLine: { show: false } },
+        yAxis: [
+          { type: 'value', ...AXIS, axisLine: { show: false }, axisLabel: { ...AXIS.axisLabel, formatter: (v) => currency.format(v) } },
+          { type: 'value', ...AXIS, axisLine: { show: false }, splitLine: { show: false }, axisLabel: { ...AXIS.axisLabel, formatter: (v) => compact.format(v) } },
+        ],
+        series: [
+          { name: 'Revenue', type: 'bar', barMaxWidth: 28, itemStyle: { borderRadius: [5, 5, 0, 0], color: ACCENT, opacity: 0.85 }, data: rows.map((r) => num(r.revenue)) },
+          { name: 'Orders', type: 'line', yAxisIndex: 1, smooth: true, symbol: 'circle', symbolSize: 6,
+            lineStyle: { width: 2.5, color: ACCENT_2 }, itemStyle: { color: ACCENT_2 }, data: rows.map((r) => num(r.orders)) },
+        ],
+      }, { notMerge: true });
+    }
+
+    function renderStatusDonut () {
+      renderStatus(byStatus, 'by-status-status');
+      if (!byStatus.result) return;
+      const rows = byStatus.result.rows;
+      const keys = selectedKeys(byStatus, 'status');
+      const total = rows.reduce((s, r) => s + (num(r.order_cnt) || 0), 0);
+      charts.byStatus.setOption({
+        color: PALETTE,
+        tooltip: { ...TOOLTIP, trigger: 'item', formatter: (p) => `${p.marker} ${p.name}: ${fmt(integer, p.value)} (${p.percent}%)` },
+        legend: { bottom: 0, icon: 'circle', itemWidth: 8, itemHeight: 8, textStyle: { color: '#6b7280', fontFamily: 'Inter, system-ui, sans-serif' } },
+        graphic: [{
+          type: 'group', left: 'center', top: '38%',
+          children: [
+            { type: 'text', style: { text: compact.format(total), fontSize: 22, fontWeight: 700, fill: '#1b1f2a', textAlign: 'center', fontFamily: 'Inter, system-ui, sans-serif' }, left: 'center' },
+            { type: 'text', top: 28, style: { text: 'orders', fontSize: 12, fill: '#9aa1ad', textAlign: 'center', fontFamily: 'Inter, system-ui, sans-serif' }, left: 'center' },
+          ],
+        }],
+        series: [{
+          type: 'pie', radius: ['52%', '74%'], center: ['50%', '44%'], avoidLabelOverlap: true,
+          itemStyle: { borderColor: '#fff', borderWidth: 2, borderRadius: 4 },
+          label: { show: false }, emphasis: { scale: true, scaleSize: 4 },
+          data: rows.map((r) => ({
+            name: String(r.status ?? '(none)'), value: num(r.order_cnt),
+            itemStyle: { opacity: isDim(keys, r.status) ? 0.25 : 1 },
+          })),
+        }],
+      }, { notMerge: true });
+    }
+
+    function renderHBar (query, chart, key, statusId) {
+      renderStatus(query, statusId);
+      if (!query.result) return;
+      const rows = query.result.rows;
+      const keys = selectedKeys(query, key);
+      chart.setOption({
+        grid: { left: 8, right: 56, top: 4, bottom: 4, containLabel: true },
+        tooltip: { ...TOOLTIP, trigger: 'item', formatter: (p) => `${p.name}: ${fmt(currencyFull, p.value)}` },
+        xAxis: { type: 'value', show: false },
+        yAxis: {
+          type: 'category', inverse: true, data: rows.map((r) => String(r[key] ?? '(none)')), ...AXIS,
+          axisLine: { show: false }, axisLabel: { ...AXIS.axisLabel, color: '#1b1f2a', width: 130, overflow: 'truncate' },
+        },
+        series: [{
+          type: 'bar', barMaxWidth: 18, cursor: 'pointer',
+          showBackground: true, backgroundStyle: { color: '#f3f4f8', borderRadius: 6 },
+          label: { show: true, position: 'right', color: '#6b7280', formatter: (p) => currency.format(p.value), fontFamily: 'Inter, system-ui, sans-serif' },
+          data: rows.map((r) => ({
+            value: num(r.revenue),
+            itemStyle: { borderRadius: 6, color: ACCENT, opacity: isDim(keys, r[key]) ? 0.25 : 1 },
+          })),
+        }],
+      }, { notMerge: true });
+    }
+
+    let productSort = { field: 'revenue', direction: 'desc' };
+    function renderProducts () {
+      renderStatus(topProducts, 'products-status');
+      const body = document.getElementById('products-body');
+      document.querySelectorAll('th.sortable').forEach((th) => {
+        th.querySelector('.arrow').textContent = th.dataset.sort === productSort.field ? (productSort.direction === 'desc' ? '↓' : '↑') : '';
+      });
+      if (!topProducts.result) return;
+      const rows = topProducts.result.rows;
+      const maxGmv = Math.max(1, ...rows.map((r) => num(r.revenue) || 0));
+      body.replaceChildren(...rows.map((r, i) => {
+        const tr = document.createElement('tr');
+        const cell = (cls, content) => {
+          const td = document.createElement('td');
+          td.className = cls;
+          if (content instanceof Node) td.append(content); else td.textContent = content;
+          return td;
+        };
+        const barCell = document.createElement('div');
+        barCell.className = 'bar-cell';
+        const track = document.createElement('div');
+        track.className = 'bar-track';
+        const fill = document.createElement('div');
+        fill.className = 'bar-fill';
+        fill.style.width = `${((num(r.revenue) || 0) / maxGmv) * 100}%`;
+        track.append(fill);
+        const label = document.createElement('span');
+        label.textContent = fmt(currencyFull, r.revenue);
+        barCell.append(track, label);
+        const name = cell('name', String(r.product ?? '(none)'));
+        name.title = String(r.product ?? '');
+        tr.append(
+          cell('rank', String(i + 1)),
+          name,
+          cell('num', barCell),
+          cell('num', fmt(integer, r.orders)),
+          cell('num', fmt(integer, r.units)),
+        );
+        return tr;
+      }));
+    }
+
+    function renderChrome () {
+      const anySelected = SOURCES.some((q) => q.selectedRows.length > 0);
+      document.getElementById('clear-selection').hidden = !anySelected;
+      const debug = kpis.result && kpis.result.debug;
+      document.getElementById('footer').textContent = debug && debug.executedAt
+        ? `Data as of ${new Date(debug.executedAt).toLocaleString()}${debug.fromCache ? ' (cached)' : ''}`
+        : '';
+    }
+
+    function render () {
+      ALL_QUERIES.forEach(logFirstResult);
+      renderKpis();
+      renderTrend();
+      renderStatusDonut();
+      renderHBar(byCategory, charts.byCategory, 'category', 'by-category-status');
+      renderHBar(byCountry, charts.byCountry, 'country', 'by-country-status');
+      renderProducts();
+      renderChrome();
+    }
+
+    app.subscribe(render);
+
+    // ---------- Chart clicks: toggle multi-select ----------
+    function toggleSelect (query, key, dataIndex) {
+      if (!query.result) return;
+      const rows = query.result.rows;
+      const clicked = rows[dataIndex];
+      if (!clicked) return;
+      const keys = selectedKeys(query, key);
+      if (keys.has(clicked[key])) keys.delete(clicked[key]); else keys.add(clicked[key]);
+      query.select(rows.filter((r) => keys.has(r[key])));
+      app.execute();
+    }
+    charts.byCategory.on('click', (p) => toggleSelect(byCategory, 'category', p.dataIndex));
+    charts.byCountry.on('click', (p) => toggleSelect(byCountry, 'country', p.dataIndex));
+    charts.byStatus.on('click', (p) => toggleSelect(byStatus, 'status', p.dataIndex));
+
+    document.getElementById('clear-selection').addEventListener('click', () => {
+      app.clearSelection();
+      app.execute();
+    });
+
+    // ---------- Date presets ----------
+    const presetButtons = [...document.querySelectorAll('#date-presets button')];
+    function setPreset (preset) {
+      presetButtons.forEach((b) => b.classList.toggle('active', b.dataset.preset === preset));
+      dateRange.setCondition({ operator: 'matches', values: preset ? [preset] : [] });
+    }
+    presetButtons.forEach((b) => b.addEventListener('click', () => { setPreset(b.dataset.preset); app.execute(); }));
+
+    // ---------- Grain toggle ----------
+    const grainButtons = [...document.querySelectorAll('#grain-toggle button')];
+    grainButtons.forEach((b) => b.addEventListener('click', () => {
+      currentGrain = b.dataset.grain;
+      grainButtons.forEach((x) => x.classList.toggle('active', x === b));
+      grain.setGrain(currentGrain);
+      app.execute();
+    }));
+
+    // ---------- Multi-select dropdowns ----------
+    const CHEVRON = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const dropdowns = [];
+
+    function makeMultiSelect (mountId, filter, label) {
+      const root = document.getElementById(mountId);
+      root.innerHTML = `
+        <button type="button" class="ms-btn"><span class="lbl"></span><span class="val"></span>${CHEVRON}</button>
+        <div class="ms-pop">
+          <input type="search" placeholder="Search…">
+          <div class="ms-list"></div>
+          <div class="ms-foot"><button type="button" data-act="clear">Clear</button><button type="button" data-act="done">Done</button></div>
+        </div>`;
+      const btn = root.querySelector('.ms-btn');
+      const search = root.querySelector('input[type=search]');
+      const list = root.querySelector('.ms-list');
+      btn.querySelector('.lbl').textContent = label;
+      const selected = new Set();
+      let options = [];
+      let loaded = false;
+
+      function updateButton () {
+        const vals = [...selected];
+        btn.querySelector('.val').textContent = vals.length === 0 ? 'All' : vals.length === 1 ? vals[0] : `${vals.length} selected`;
+        btn.classList.toggle('has-value', vals.length > 0);
+      }
+
+      function renderList () {
+        const term = search.value.trim().toLowerCase();
+        const shown = options.filter((o) => o.toLowerCase().includes(term));
+        if (!loaded) { list.innerHTML = '<div class="ms-empty">Loading options…</div>'; return; }
+        if (shown.length === 0) { list.innerHTML = '<div class="ms-empty">No matches</div>'; return; }
+        list.replaceChildren(...shown.map((value) => {
+          const row = document.createElement('label');
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.checked = selected.has(value);
+          cb.addEventListener('change', () => {
+            if (cb.checked) selected.add(value); else selected.delete(value);
+            apply();
+          });
+          const text = document.createElement('span');
+          text.textContent = value;
+          row.append(cb, text);
+          return row;
+        }));
+      }
+
+      function apply () {
+        filter.setCondition({ operator: 'is', values: [...selected] });
+        updateButton();
+        app.execute();
+      }
+
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const willOpen = !root.classList.contains('open');
+        dropdowns.forEach((d) => d.close());
+        if (willOpen) { root.classList.add('open'); renderList(); search.focus(); }
+      });
+      root.querySelector('.ms-pop').addEventListener('click', (e) => e.stopPropagation());
+      search.addEventListener('input', renderList);
+      root.querySelector('[data-act=clear]').addEventListener('click', () => { selected.clear(); renderList(); apply(); });
+      root.querySelector('[data-act=done]').addEventListener('click', () => root.classList.remove('open'));
+
+      filter.loadOptions().then((opts) => {
+        options = (opts || []).filter((o) => o != null).map(String);
+        loaded = true;
+        renderList();
+      }).catch((err) => {
+        console.error(`Could not load ${label} options`, err);
+        loaded = true;
+        list.innerHTML = `<div class="ms-empty">Couldn't load options</div>`;
+      });
+
+      updateButton();
+      const api = {
+        close: () => root.classList.remove('open'),
+        reset: () => { selected.clear(); filter.setCondition({ operator: 'is', values: [] }); updateButton(); renderList(); },
+      };
+      dropdowns.push(api);
+      return api;
+    }
+
+    makeMultiSelect('ms-country', country, 'Country');
+    makeMultiSelect('ms-category', category, 'Category');
+    makeMultiSelect('ms-status', status, 'Status');
+    document.addEventListener('click', () => dropdowns.forEach((d) => d.close()));
+
+    // ---------- Table sort ----------
+    document.querySelectorAll('th.sortable').forEach((th) => th.addEventListener('click', () => {
+      const field = th.dataset.sort;
+      productSort = productSort.field === field
+        ? { field, direction: productSort.direction === 'desc' ? 'asc' : 'desc' }
+        : { field, direction: 'desc' };
+      topProducts.setSort([productSort]);
+      renderProducts();
+      app.execute();
+    }));
+
+    // ---------- Reset ----------
+    document.getElementById('reset-filters').addEventListener('click', () => {
+      setPreset(DEFAULT_RANGE);
+      dropdowns.forEach((d) => d.reset());
+      app.clearSelection();
+      app.execute();
+    });
+
+    // ---------- Downloads: a panel's data as CSV, its picture as PNG ----------
+    // The whole page is the host toolbar's to download. An export runs its query again for every
+    // row, not only the ones shown, with the filters, selection, grain and sort on screen.
+    const canExport = Boolean(Anfra.features.export && Anfra.user.permissions.canExportData);
+    const canRender = Boolean(Anfra.features.render && Anfra.user.permissions.canExportData);
+    const QUERIES = { kpis, trend, byCategory, byCountry, byStatus, topProducts };
+    const DOWNLOAD_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>';
+    const menus = [];
+
+    let toastTimer;
+    function toast (text, isError = false) {
+      const el = document.getElementById('toast');
+      el.textContent = text;
+      el.classList.toggle('error', isError);
+      el.classList.add('visible');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('visible'), isError ? 6000 : 3000);
+    }
+
+    function mountDownloads (root) {
+      const query = QUERIES[root.dataset.query];
+      const title = root.dataset.title;
+      const filename = `Ecommerce Overview - ${title}`;
+      const node = root.dataset.block ? { block: root.dataset.block } : { container: root.dataset.container };
+      const items = [
+        canExport && '<button type="button" data-act="csv">Data as CSV<small>Every row, with the filters on screen</small></button>',
+        canRender && `<button type="button" data-act="png">Picture as PNG<small>This ${root.dataset.block ? 'panel' : 'section'}, as shown</small></button>`,
+      ].filter(Boolean);
+      if (!items.length) return;
+      root.innerHTML = `<button type="button" class="dl-btn">${DOWNLOAD_ICON}</button><div class="dl-pop">${items.join('')}</div>`;
+      const btn = root.querySelector('.dl-btn');
+      btn.title = `Download ${title}`;
+      btn.setAttribute('aria-label', btn.title);
+      root.hidden = false;
+
+      async function download (act) {
+        root.classList.remove('open');
+        btn.disabled = true;
+        btn.classList.add('busy');
+        try {
+          if (act === 'csv') {
+            const file = await query.export({ filename });
+            toast(`Downloading ${file.filename} · ${integer.format(file.rowCount)} rows`);
+          } else {
+            const picture = await Anfra.render({ ...node, format: 'png', filename });
+            toast(`Downloading ${picture.filename}`);
+          }
+        } catch (err) {
+          console.error(`[download] ${act} ${title}`, err);
+          toast(`Couldn't download ${title}: ${err.message}`, true);
+        } finally {
+          btn.disabled = false;
+          btn.classList.remove('busy');
+        }
+      }
+
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const willOpen = !root.classList.contains('open');
+        closeMenus();
+        root.classList.toggle('open', willOpen);
+      });
+      root.querySelector('.dl-pop').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const item = e.target.closest('[data-act]');
+        if (item) download(item.dataset.act);
+      });
+      menus.push(root);
+    }
+    function closeMenus () { menus.forEach((m) => m.classList.remove('open')); }
+    document.querySelectorAll('.dl').forEach(mountDownloads);
+    document.addEventListener('click', closeMenus);
+
+    window.addEventListener('resize', () => Object.values(charts).forEach((c) => c.resize()));
+
+    app.execute();
+  </script>
+</body>
+</html>
