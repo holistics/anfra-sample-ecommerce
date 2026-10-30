@@ -1,0 +1,5 @@
+data_sources:
+  ecommerce_duckdb:
+    type: duckdb
+    connection:
+      path: data/ecommerce.duckdb?access_mode=read_only&enable_external_access=false
