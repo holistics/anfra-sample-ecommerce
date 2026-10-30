@@ -19,6 +19,8 @@ Run anfra from the repo root. It reads `.anfra/` from the current directory.
 | `.anfra/context_sources.yml` | What `anfra ingest` reads to build the search catalog. |
 | `models/ecommerce/` | Six AML models, one per table. |
 | `datasets/ecommerce/ecommerce.dataset.aml` | The `ecommerce` dataset: the models, how they join, and the shared metrics. |
+| `wiki/ecommerce/` | The business rules behind the metrics and fields, one Markdown file per topic. Read them before writing queries. |
+| `AGENTS.md` | Instructions for coding agents working in this repo. |
 
 ### Models
 
