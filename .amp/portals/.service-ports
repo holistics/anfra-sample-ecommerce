@@ -1,0 +1,5 @@
+{
+  "servicePorts": {
+    "sample-serve": 31729
+  }
+}
