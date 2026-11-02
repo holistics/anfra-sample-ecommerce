@@ -31,4 +31,4 @@ Keep the sample consistent with its wiki:
 
 ## Building a Data App
 
-The repo has no Data Apps. To build one on the `ecommerce` dataset, run `anfra skills install` first. The skills cover writing and previewing apps.
+`apps/ecommerce/overview.html` is a Data App on the `ecommerce` dataset. Use it as an example of queries, filters and cross-filters. Preview apps with `anfra serve`. Before building or changing an app, run `anfra skills install`; the skills cover writing and previewing apps.

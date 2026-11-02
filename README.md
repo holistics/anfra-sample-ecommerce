@@ -19,6 +19,7 @@ Run anfra from the repo root. It reads `.anfra/` from the current directory.
 | `.anfra/context_sources.yml` | What `anfra ingest` reads to build the search catalog. |
 | `models/ecommerce/` | Six AML models, one per table. |
 | `datasets/ecommerce/ecommerce.dataset.aml` | The `ecommerce` dataset: the models, how they join, and the shared metrics. |
+| `apps/ecommerce/overview.html` | A Data App: revenue, orders and buyers with trends, breakdowns and filters. Open it with `anfra serve`. |
 | `wiki/ecommerce/` | The business rules behind the metrics and fields, one Markdown file per topic. Read them before writing queries. |
 | `AGENTS.md` | Instructions for coding agents working in this repo. |
 
@@ -71,6 +72,14 @@ Revenue and average order value by region:
 ```sh
 anfra query -d ecommerce 'markets | group(markets.region) | select(markets.region, revenue, aov)'
 ```
+
+## Data App
+
+```sh
+anfra serve
+```
+
+Then open the URL it prints and pick **Ecommerce Overview** under `ecommerce`. The app is one HTML file, `apps/ecommerce/overview.html`, that queries the `ecommerce` dataset.
 
 ## Next steps
 
