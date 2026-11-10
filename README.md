@@ -1,6 +1,6 @@
 # Anfra sample: e-commerce
 
-A small online shop, ready to query with [anfra](https://github.com/holistics/anfra). `anfra init --with-sample` downloads this repo. You can also clone it and use it as it is:
+A small online shop, ready to query with [anfra](https://github.com/holistics/anfra). `anfra init --example` downloads this repo. You can also clone it and use it as it is:
 
 ```sh
 git clone https://github.com/holistics/anfra-sample-ecommerce.git
@@ -14,7 +14,7 @@ Run anfra from the repo root. It reads `.anfra/` from the current directory.
 
 | Path | What it is |
 | --- | --- |
-| `data/ecommerce.duckdb` | The data: a DuckDB file, opened read-only. No database server or credentials needed. |
+| `example-data/ecommerce.duckdb` | The data: a DuckDB file, opened read-only. No database server or credentials needed. It is sample data, committed so a clone can query it right away. |
 | `.anfra/data_sources.yml` | One data source, `ecommerce_duckdb`, pointing at the DuckDB file. It has no credentials, so it is committed. |
 | `.anfra/context_sources.yml` | What `anfra ingest` reads to build the search catalog. |
 | `models/ecommerce/` | Six AML models, one per table. |
