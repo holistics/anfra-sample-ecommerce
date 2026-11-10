@@ -1,0 +1,50 @@
+name: validate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  # anfra's latest release changes without this repo changing.
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # The oldest anfra this sample must work on. `anfra init --example`
+  # downloads the latest main of this repo, not a pinned commit, so every
+  # anfra from this version on gets whatever main holds. Raising it drops
+  # those older versions: they would download a sample they cannot run.
+  ANFRA_OLDEST: 0.14.2
+
+jobs:
+  validate:
+    name: anfra ${{ matrix.anfra }}
+    # canal-query, anfra's query sidecar, needs glibc 2.38 or later.
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        anfra: [oldest, latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install anfra
+        run: |
+          if [ "${{ matrix.anfra }}" = oldest ]; then export ANFRA_VERSION="$ANFRA_OLDEST"; fi
+          curl -fsSL https://anfra.ai/install.sh | ANFRA_NO_MODIFY_PATH=1 bash
+          echo "$HOME/.anfra/bin" >> "$GITHUB_PATH"
+
+      - run: anfra version
+
+      # Older anfra versions may exit 0 on an invalid repo, so check the verdict.
+      - name: anfra validate
+        run: |
+          anfra validate | tee validate.out
+          grep -qx 'valid: true' validate.out
+
+      # Reads the DuckDB file, which an older anfra's DuckDB may not open.
+      - name: Query the sample
+        run: anfra query -d ecommerce 'products | group(products.category) | select(products.category, revenue)'
